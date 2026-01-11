@@ -68,8 +68,17 @@ jobs:
       - name: Build Backend (Static Binary)
         run: |
           cd backend
-          # Use cross for easier cross-compilation if needed, but for musl on ubuntu runner, cargo is often enough with musl-tools.
-          # For aarch64 on x86 runner, we strictly need `cross`.
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+             cargo build --release --target ${{ matrix.target }}
+          else
+             cargo install cross
+             cross build --release --target ${{ matrix.target }}
+          fi
+
+      - name: Build Xray-Lite and Keygen (Static Binary)
+        run: |
+          git clone https://github.com/undead-undead/xray-lite.git xray-lite-repo
+          cd xray-lite-repo
           if [ "${{ matrix.arch }}" = "amd64" ]; then
              cargo build --release --target ${{ matrix.target }}
           else
@@ -83,8 +92,12 @@ jobs:
           mkdir -p release/data
           mkdir -p release/logs
           
-          # Copy Binary
+          # Copy Panel Binary
           cp backend/target/${{ matrix.target }}/release/x-ui-backend release/bin/
+          
+          # Copy Xray and Keygen Binaries
+          cp xray-lite-repo/target/${{ matrix.target }}/release/vless-server release/bin/xray
+          cp xray-lite-repo/target/${{ matrix.target }}/release/keygen release/bin/keygen
           
           # Copy Frontend (already placed in backend/bin/dist)
           cp -r backend/bin/dist/* release/bin/dist/
@@ -95,6 +108,11 @@ jobs:
           # Archive
           cd release
           tar -czvf ../x-ui-linux-${{ matrix.arch }}.tar.gz *
+          
+      - name: Extract Additional Assets
+        run: |
+          cp xray-lite-repo/target/${{ matrix.target }}/release/vless-server vless-server-linux-${{ matrix.arch == 'amd64' && 'x86_64' || 'aarch64' }}
+          cp xray-lite-repo/target/${{ matrix.target }}/release/keygen keygen-linux-${{ matrix.arch == 'amd64' && 'x86_64' || 'aarch64' }}
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
@@ -102,4 +120,6 @@ jobs:
         with:
           files: |
             x-ui-linux-${{ matrix.arch }}.tar.gz
+            vless-server-linux-${{ matrix.arch == 'amd64' && 'x86_64' || 'aarch64' }}
+            keygen-linux-${{ matrix.arch == 'amd64' && 'x86_64' || 'aarch64' }}
             install.sh

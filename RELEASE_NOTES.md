@@ -1,17 +1,11 @@
-# X-UI-Lite v2.5.2 - Global Traffic Reset & Accuracy
+# X-UI-Lite v2.5.7 - Universal Static Release
 
-This release focuses on functional correctness for traffic management and global statistics.
+This version provides the stability of v2.5.2 with the added benefit of **Universal Static Binaries**.
 
-### 🌟 Key Improvements
-
-#### 🔄 Global Traffic Reset
-The "Reset" button in the **Inbound List Header** now performs a **Real Database Reset** for all nodes. This allows you to clear all traffic metrics across your entire panel with a single click.
-
-#### 📊 Absolute Sum Statistics
-The total upload and download figures in the header now show the **exact sum** of all nodes from the database. We have removed the session-based "baseline" logic to provide a more transparent and intuitive view of your total data usage.
-
-#### 🛡️ Resilient Collector
-Found and fixed a subtle bug in the traffic parsing logic that could sometimes fail to extract node tags correctly. This ensures more reliable "Upload/Download" metrics in the node list.
+### 🌟 What's New?
+- **Fixed "GLIBC not found"**: We have switched to a full Musl static build for the Panel, Xray, and Keygen. This fixes the issue where the software would fail to start on older VPS systems (like Debian 10).
+- **v2.5.2 Logic Core**: We have returned to the stable connection logic you preferred, maintaining the matching behavior between the panel and the `keygen` tool.
+- **Portability**: One package now works perfectly across different VPS providers and OS versions.
 
 ### 🛠 Installation & Upgrade
 
@@ -19,9 +13,4 @@ Found and fixed a subtle bug in the traffic parsing logic that could sometimes f
 bash <(curl -Ls https://raw.githubusercontent.com/undead-undead/x-ui-lite/main/install.sh)
 ```
 
-### ⚠️ Note for Users
-The new traffic tracking requires `iptables` support in the kernel. Most Linux distributions (Ubuntu, Debian, CentOS) support this out of the box.
-
----
-
-**Full Changelog**: [CHANGELOG.md](https://github.com/undead-undead/x-ui-lite/blob/v2.5.2/CHANGELOG.md)
+**Full Changelog**: [CHANGELOG.md](https://github.com/undead-undead/x-ui-lite/blob/v2.5.7/CHANGELOG.md)

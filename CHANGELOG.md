@@ -2,6 +2,16 @@
 
 All notable changes to X-UI-Lite will be documented in this file.
 
+## [2.5.7] - 2026-01-11
+
+### 🛡️ Universal Compatibility (Static Release)
+
+- **Full Static Binaries**: All components (Panel, Xray-Core, Keygen) are now built with the `musl` target. This eliminates `GLIBC_2.xx not found` errors on older Linux distributions like Debian 10 or Ubuntu 20.04.
+- **Improved Reliability**: Guaranteed to run on any Linux environment regardless of system library versions.
+- **Stability Focused**: Reverts some aggressive traffic tracking changes to match the stability profile of v2.5.2, while keeping the essential fixes.
+
+---
+
 ## [2.5.2] - 2026-01-11
 
 ### 🚀 Bug Fixes & Features

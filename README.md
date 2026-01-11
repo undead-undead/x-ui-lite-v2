@@ -20,6 +20,10 @@ A high-performance, minimalist X-UI panel powered by **xray-lite**.
 bash <(curl -fsSL https://raw.githubusercontent.com/undead-undead/x-ui-lite/main/install.sh)
 ```
 
+> **Note**: This is a **static compilation version** that works perfectly on **any Linux system** (Debian, Ubuntu, CentOS, Alpine, etc.) without dependency issues.
+>
+> **注意**：此为**静态编译版本**，完美适配**任何 Linux 系统** (Debian, Ubuntu, CentOS, Alpine 等)，无需担心依赖问题。
+
 ---
 
 ## ✨ Features

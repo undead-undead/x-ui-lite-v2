@@ -136,7 +136,6 @@ pub async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> crate::e
         { "tag": "blocked", "protocol": "blackhole" }
     ]));
     root.insert("routing".to_string(), json!({
-        "domainStrategy": "IPIfNonMatch",
         "rules": []
     }));
 

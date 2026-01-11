@@ -54,8 +54,17 @@ pub async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> ApiResul
             .as_ref()
             .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok());
             
-        if let Some(sniffing) = sniffing_json {
-            if let Some(obj) = settings_json.as_object_mut() {
+        if let Some(obj) = settings_json.as_object_mut() {
+            // Ensure clients field exists (required by xray-lite)
+            if !obj.contains_key("clients") {
+                obj.insert("clients".to_string(), serde_json::json!([]));
+            }
+            // Ensure decryption field exists
+            if !obj.contains_key("decryption") {
+                obj.insert("decryption".to_string(), serde_json::json!("none"));
+            }
+
+            if let Some(sniffing) = sniffing_json {
                 obj.insert("sniffing".to_string(), sniffing);
             }
         }
@@ -67,6 +76,15 @@ pub async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> ApiResul
             .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok());
 
         if let Some(ref mut ss) = stream_settings_json {
+            // Fix network: xhttp -> tcp (xray-lite doesn't have xhttp enum variant)
+            if let Some(network) = ss.get("network").and_then(|n| n.as_str()) {
+                if network == "xhttp" {
+                    if let Some(ss_obj) = ss.as_object_mut() {
+                        ss_obj.insert("network".to_string(), serde_json::json!("tcp"));
+                    }
+                }
+            }
+
             // Fix realitySettings: serverName -> serverNames
             if let Some(reality) = ss.get_mut("realitySettings") {
                 if let Some(reality_obj) = reality.as_object_mut() {

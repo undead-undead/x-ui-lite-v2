@@ -172,9 +172,10 @@ enable_bbr() {
 }
 
 install_xray() {
+    # Force update: remove existing binary if it exists
     if [[ -f "$XRAY_BIN_PATH" ]]; then
-        i18n "xray_exists"
-        return
+        echo "Removing existing xray-lite binary to ensure update..."
+        rm -f "$XRAY_BIN_PATH"
     fi
 
     i18n "xray_installing"

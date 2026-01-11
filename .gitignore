@@ -35,3 +35,6 @@ backend/logs/
 backend/cookies.txt
 web/.antigravityignore
 logs/
+release/
+**/target/
+**/dist/

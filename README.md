@@ -4,7 +4,7 @@ A high-performance, minimalist X-UI panel powered by **xray-lite**.
 
 <div align="center">
 
-[![Build and Release](https://github.com/undead-undead/x-ui-rs/actions/workflows/release.yml/badge.svg)](https://github.com/undead-undead/x-ui-rs/actions/workflows/release.yml)
+[![Build and Release](https://github.com/undead-undead/x-ui-lite/actions/workflows/release.yml/badge.svg)](https://github.com/undead-undead/x-ui-lite/actions/workflows/release.yml)
 ![Memory](https://img.shields.io/badge/RAM-%3C%2020MB-green)
 ![Bilingual](https://img.shields.io/badge/Language-ZH/EN-blue)
 
@@ -74,7 +74,7 @@ You are free to use, modify, and distribute this software.
 If you fork or redistribute this project, you **MUST**:
 
 1. ✅ **Keep original sponsor links intact** - Do not remove or replace the "☕ 赞助项目" button or any sponsor links
-2. ✅ **Clearly indicate it's a fork** - State that your version is derived from [x-ui-rs](https://github.com/undead-undead/x-ui-rs)
+2. ✅ **Clearly indicate it's a fork** - State that your version is derived from [x-ui-lite](https://github.com/undead-undead/x-ui-lite)
 3. ✅ **Credit the original author** - Maintain attribution in README and UI
 4. ✅ **No misrepresentation** - Do not claim your fork is the official version
 

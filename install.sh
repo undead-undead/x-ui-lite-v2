@@ -246,44 +246,23 @@ install_x_ui() {
     cd /tmp || { echo -e "${red}Failed to cd to /tmp${plain}"; return 1; }
     rm -f x-ui-linux-${arch}.tar.gz
     
-    # Try v2.0.0 first, fallback to v1.1.88 if not available
-    download_success=false
-    
     # Use -L to follow redirects from GitHub
     if command -v wget &> /dev/null; then
         echo "Using wget to download..."
         wget -L --no-check-certificate -O x-ui-linux-${arch}.tar.gz "$RELEASE_URL" 2>&1
-        if [[ $? -eq 0 && -f x-ui-linux-${arch}.tar.gz && -s x-ui-linux-${arch}.tar.gz ]]; then
-            download_success=true
-        fi
     elif command -v curl &> /dev/null; then
         echo "Using curl to download..."
         curl -L -o x-ui-linux-${arch}.tar.gz "$RELEASE_URL" 2>&1
-        if [[ $? -eq 0 && -f x-ui-linux-${arch}.tar.gz && -s x-ui-linux-${arch}.tar.gz ]]; then
-            download_success=true
-        fi
     else
         echo -e "${red}Error: Neither wget nor curl is available${plain}"
         return 1
     fi
     
-    # If v2.0.0 download failed, try v1.1.88 as fallback
-    if [[ "$download_success" == "false" ]]; then
-        echo -e "${yellow}v2.0.0 Release not found, falling back to v1.1.88 backend...${plain}"
-        echo -e "${yellow}Note: Backend will be v1.1.88, but xray-lite core will still be used${plain}"
-        
-        FALLBACK_URL="https://github.com/undead-undead/x-ui-rs/releases/download/v1.1.88/x-ui-linux-${arch}.tar.gz"
-        
-        if command -v wget &> /dev/null; then
-            wget -L --no-check-certificate -O x-ui-linux-${arch}.tar.gz "$FALLBACK_URL" 2>&1
-        elif command -v curl &> /dev/null; then
-            curl -L -o x-ui-linux-${arch}.tar.gz "$FALLBACK_URL" 2>&1
-        fi
-    fi
-    
-    # Final verification
+    # Verify download
     if [[ ! -f x-ui-linux-${arch}.tar.gz || ! -s x-ui-linux-${arch}.tar.gz ]]; then
-        echo -e "${red}Failed to download X-UI backend${plain}"
+        echo -e "${red}Failed to download X-UI v2.0.0${plain}"
+        echo -e "${red}Please check if the v2.0.0 release exists at:${plain}"
+        echo -e "${red}https://github.com/undead-undead/x-ui-lite-v2/releases/tag/v2.0.0${plain}"
         i18n "xui_fail"
         return 1
     fi

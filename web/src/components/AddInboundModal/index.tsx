@@ -26,11 +26,11 @@ export const AddInboundModal = () => {
     };
 
     const generateShortIds = () => {
-        const randomValues = new Uint8Array(4);
+        const randomValues = new Uint8Array(8);
         if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
             crypto.getRandomValues(randomValues);
         } else {
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 8; i++) {
                 randomValues[i] = Math.floor(Math.random() * 256);
             }
         }

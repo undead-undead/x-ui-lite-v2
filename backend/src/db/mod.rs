@@ -3,11 +3,11 @@ use std::env;
 
 pub async fn init_pool() -> anyhow::Result<SqlitePool> {
     let database_url =
-        env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:data/x-ui.db".to_string());
+        env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:/usr/local/x-ui/data/x-ui.db".to_string());
 
     tracing::info!("Connecting to database: {}", database_url);
 
-    std::fs::create_dir_all("data")?;
+    let _ = std::fs::create_dir_all("/usr/local/x-ui/data");
 
     let pool = SqlitePoolOptions::new()
         .max_connections(2)

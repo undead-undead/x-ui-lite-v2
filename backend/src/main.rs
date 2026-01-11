@@ -20,7 +20,7 @@ fn auto_init_env() {
         let secret = uuid::Uuid::new_v4().to_string();
         let content = format!(
             r#"# Auto-generated configuration - created on first start
-DATABASE_URL=sqlite://data/x-ui.db
+DATABASE_URL=sqlite:/usr/local/x-ui/data/x-ui.db
 
 # JWT secret - auto-generated strong random string
 JWT_SECRET={}

@@ -1,18 +1,16 @@
-# X-UI-Lite v2.5.9 - Critical Performance Patch 🚀
+# X-UI-Lite v2.5.10 - Native Key Generation 🦀
 
-This release includes **xray-lite v0.2.78** which introduces a critical performance optimization: **Smart Write Buffering**.
+This release introduces **Native Rust Key Generation**, removing the dependency on external binaries for Reality keys.
 
-### 🛠 Fixes & Improvements
-- **100% Speed Recovery**: Solved the issue where YouTube/Netflix speeds were capped at ~70-80% of bandwidth.
-- **Smart Write Buffer**: Added a 14KB intelligent buffer to the Reality TLS layer.
-  - **Before**: Every small packet (e.g., 50 bytes) triggered a full encryption block + syscall.
-  - **After**: Small packets are aggregated into fewer, larger blocks, reducing CPU load by up to **90%** and maximizing throughput.
+### 🌟 Key Features
+- **Native Implementation**: Uses `x25519-dalek` directly within the backend, guaranteeing 100% compatibility with the xray-lite core (which uses the same library).
+- **Fix for Old Systems**: Solves the "Failed to generate keys" error on older Linux distributions (CentOS 7, etc.) where GLIBC versions caused binary incompatibility.
+- **Performance**: Instant key generation with zero process overhead.
 
 ### 📦 Upgrade Now
-Run the one-click script to upgrade automatically:
 
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/undead-undead/x-ui-lite/main/install.sh)
 ```
 
-**Full Changelog**: [CHANGELOG.md](https://github.com/undead-undead/x-ui-lite/blob/v2.5.9/CHANGELOG.md)
+**Full Changelog**: [CHANGELOG.md](https://github.com/undead-undead/x-ui-lite/blob/v2.5.10/CHANGELOG.md)

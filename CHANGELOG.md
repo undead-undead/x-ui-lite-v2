@@ -2,6 +2,16 @@
 
 All notable changes to X-UI-Lite will be documented in this file.
 
+## [2.5.10] - 2026-01-12
+
+### 🦀 Native Key Generation
+
+- **Removed External Dependency**: Replaced the external `keygen` binary with a pure Rust implementation using `x25519-dalek`.
+- **Fixed "Generate Failed"**: Solves the issue where key generation fails on older systems (CentOS 7, Debian 9) due to GLIBC or binary compatibility issues.
+- **Faster**: Key generation is now instant and in-memory, no process spawning required.
+
+---
+
 ## [2.5.9] - 2026-01-12
 
 ### ⚡ Critical Performance Fix (Core v0.2.78)

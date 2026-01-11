@@ -1,0 +1,56 @@
+MIT License with Additional Terms
+
+Copyright (c) 2026 x-ui-rs Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+ADDITIONAL TERMS FOR FORKS AND DERIVATIVES:
+
+If you fork, modify, or redistribute this project (in whole or in part), you 
+MUST comply with the following additional terms:
+
+1. **Attribution Requirement**: You must clearly indicate that your version is 
+   a fork or derivative of the original x-ui-rs project, and provide a link to 
+   the original repository (https://github.com/undead-undead/x-ui-rs).
+
+2. **Sponsor Link Preservation**: You MUST keep all original sponsor, donation, 
+   and support links intact and unmodified. This includes but is not limited to:
+   - The "☕ 赞助项目" (Sponsor Project) button in the sidebar
+   - Any sponsor links in the README or documentation
+   - Attribution links in the application footer or about section
+   
+   You may ADD your own sponsor links alongside the original ones, but you may 
+   NOT remove, replace, or obscure the original project's sponsor links.
+
+3. **Clear Fork Identification**: Your fork must be clearly identified as a 
+   derivative work in:
+   - The project README
+   - The application's user interface (if applicable)
+   - Any distribution or marketing materials
+
+4. **No Misrepresentation**: You may not present your fork as the original 
+   project or imply official endorsement by the original authors.
+
+ENFORCEMENT:
+
+Violation of these additional terms may result in:
+- Termination of your license to use this software
+- Removal of your fork through DMCA takedown requests
+- Public disclosure of the violation to the open-source community
+- Legal action if necessary to protect the original project's interests
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

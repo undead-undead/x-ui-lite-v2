@@ -1,0 +1,1 @@
+ALTER TABLE inbounds ADD COLUMN tag TEXT;

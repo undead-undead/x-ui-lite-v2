@@ -1,0 +1,4 @@
+
+ALTER TABLE inbounds ADD COLUMN tag TEXT;
+ALTER TABLE inbounds ADD COLUMN listen TEXT;
+ALTER TABLE inbounds ADD COLUMN allocate TEXT;

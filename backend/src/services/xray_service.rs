@@ -38,24 +38,40 @@ pub async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> ApiResul
             .as_ref()
             .and_then(|s| serde_json::from_str(s).ok());
 
+        // xray-lite requires "listen" field to be present
+        let listen = inbound.listen.clone().unwrap_or_else(|| "0.0.0.0".to_string());
+
+        // Handle sniffing: move it into settings for xray-lite compliance
+        // And merge existing settings
+        let mut settings_json = inbound
+            .settings
+            .as_ref()
+            .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+            .unwrap_or(serde_json::json!({}));
+        
+        let sniffing_json = inbound
+            .sniffing
+            .as_ref()
+            .and_then(|s| serde_json::from_str::<serde_json::Value>(s).ok());
+            
+        if let Some(sniffing) = sniffing_json {
+            if let Some(obj) = settings_json.as_object_mut() {
+                obj.insert("sniffing".to_string(), sniffing);
+            }
+        }
+
         let inbound_config = InboundConfig {
             tag,
             port: inbound.port,
             protocol: inbound.protocol.clone(),
-            listen: inbound.listen.clone(),
+            listen: Some(listen), // Ensure listen is set
             allocate,
-            settings: inbound
-                .settings
-                .as_ref()
-                .and_then(|s| serde_json::from_str(s).ok()),
+            settings: Some(settings_json), // Settings now includes sniffing
             stream_settings: inbound
                 .stream_settings
                 .as_ref()
                 .and_then(|s| serde_json::from_str(s).ok()),
-            sniffing: inbound
-                .sniffing
-                .as_ref()
-                .and_then(|s| serde_json::from_str(s).ok()),
+            sniffing: None, // Remove top-level sniffing (it's now in settings)
         };
 
         config.inbounds.push(inbound_config);

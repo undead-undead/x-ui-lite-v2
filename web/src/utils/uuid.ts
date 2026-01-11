@@ -3,25 +3,32 @@
  * Polyfill for crypto.randomUUID() for older browsers
  */
 export function generateUUID(): string {
-    // Try native API first
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
-    }
+    // Explicit manual generation to strictly ensure 36-character length
+    // Format: 8-4-4-4-12
+    const hex = '0123456789abcdef';
+    let uuid = '';
 
-    // Fallback for older browsers or environments
-    // Ensure strict v4 UUID format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-    let d = new Date().getTime();
-    let d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now() * 1000)) || 0;
+    // Segment 1: 8 chars
+    for (let i = 0; i < 8; i++) uuid += hex[Math.floor(Math.random() * 16)];
+    uuid += '-';
 
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        let r = Math.random() * 16;
-        if (d > 0) {
-            r = (d + r) % 16 | 0;
-            d = Math.floor(d / 16);
-        } else {
-            r = (d2 + r) % 16 | 0;
-            d2 = Math.floor(d2 / 16);
-        }
-        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-    });
+    // Segment 2: 4 chars
+    for (let i = 0; i < 4; i++) uuid += hex[Math.floor(Math.random() * 16)];
+    uuid += '-';
+
+    // Segment 3: 4 chars (Version 4)
+    uuid += '4';
+    for (let i = 0; i < 3; i++) uuid += hex[Math.floor(Math.random() * 16)];
+    uuid += '-';
+
+    // Segment 4: 4 chars (Variant)
+    const r = Math.floor(Math.random() * 16);
+    uuid += hex[(r & 0x3) | 0x8];
+    for (let i = 0; i < 3; i++) uuid += hex[Math.floor(Math.random() * 16)];
+    uuid += '-';
+
+    // Segment 5: 12 chars
+    for (let i = 0; i < 12; i++) uuid += hex[Math.floor(Math.random() * 16)];
+
+    return uuid;
 }

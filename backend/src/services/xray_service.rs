@@ -1,15 +1,12 @@
-use crate::models::xray_config::{
-    ApiConfig, InboundConfig, LogConfig, OutboundConfig, RoutingConfig, RoutingRule, XrayConfig,
-};
 use crate::services::system_service::{self, SharedMonitor};
 use axum::async_trait;
 use sqlx::SqlitePool;
 use std::env;
-use serde_json::{json, Value};
+use serde_json::{json, Value, Map};
 
 #[async_trait]
 pub trait XrayService {
-    async fn generate_config(pool: &SqlitePool) -> crate::errors::ApiResult<XrayConfig>;
+    async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> crate::errors::ApiResult<()>;
 }
 
 pub async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> crate::errors::ApiResult<()> {
@@ -20,55 +17,45 @@ pub async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> crate::e
             crate::errors::ApiError::InternalError(format!("Failed to fetch inbounds: {}", e))
         })?;
 
-    let mut config = XrayConfig {
-        log: LogConfig::default(),
-        api: ApiConfig {
-            tag: "api".to_string(),
-            services: vec!["HandlerService".to_string(), "StatsService".to_string()],
-        },
-        dns: None,
-        stats: None,
-        policy: None,
-        inbounds: vec![],
-        outbounds: vec![],
-        routing: None,
-    };
-
+    // --- Create a pure JSON map for xray-lite ---
+    // xray-lite ONLY supports: inbounds, outbounds, routing
+    let mut root = Map::new();
     let mut inbound_configs = Vec::new();
 
     for inbound in inbounds {
-        // --- 1. Clients & Settings ---
+        // 1. Prepare Settings
         let clients_raw = inbound.settings.as_ref()
             .and_then(|s| serde_json::from_str::<Value>(s).ok())
             .and_then(|v| v.get("clients").cloned())
             .unwrap_or_else(|| json!([]));
         
-        // Clean up clients (ensure only ID is present if it's VLESS)
         let mut clients = Vec::new();
         if let Some(arr) = clients_raw.as_array() {
             for c in arr {
-                let mut client = json!({});
+                let mut client = Map::new();
                 if let Some(id) = c.get("id").or_else(|| c.get("password")) {
-                    client["id"] = id.clone();
+                    client.insert("id".to_string(), id.clone());
                 }
                 if let Some(email) = c.get("email") {
-                    client["email"] = email.clone();
+                    client.insert("email".to_string(), email.clone());
                 }
-                clients.push(client);
+                clients.push(Value::Object(client));
             }
         }
 
-        let sniffing_json = inbound.sniffing.as_ref()
-            .and_then(|s| serde_json::from_str::<Value>(s).ok())
-            .unwrap_or_else(|| json!({ "enabled": false, "destOverride": ["tls", "http"] }));
+        // Force sniffing configuration (Mandatory for Reality SNI)
+        let sniffing = json!({
+            "enabled": true,
+            "destOverride": ["tls", "http"]
+        });
 
         let settings = json!({
             "clients": clients,
             "decryption": "none",
-            "sniffing": sniffing_json
+            "sniffing": sniffing
         });
 
-        // --- 2. Stream Settings ---
+        // 2. Prepare Stream Settings
         let stream_settings_raw = inbound.stream_settings.as_ref()
             .and_then(|s| serde_json::from_str::<Value>(s).ok())
             .unwrap_or_else(|| json!({ "network": "tcp", "security": "none" }));
@@ -80,96 +67,80 @@ pub async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> crate::e
         let safe_network = if network == "xhttp" { "tcp" } else { network };
         ss_obj.insert("network".to_string(), json!(safe_network));
 
-        // Reality Normalization (Extremely strict for xray-lite)
+        // Reality Strict Normalization
         if ss_obj.get("security").and_then(|s| s.as_str()) == Some("reality") {
             if let Some(rs_val) = ss_obj.get("realitySettings") {
-                let mut rs_new = json!({});
+                let mut rs_new = Map::new();
                 
-                // Only take what xray-lite supports
-                rs_new["dest"] = rs_val.get("dest").cloned().unwrap_or(json!("www.microsoft.com:443"));
-                rs_new["privateKey"] = rs_val.get("privateKey").cloned().or_else(|| rs_val.get("private_key").cloned()).unwrap_or(json!(""));
-                rs_new["publicKey"] = rs_val.get("publicKey").cloned().or_else(|| rs_val.get("public_key").cloned()).unwrap_or(Value::Null);
-                rs_new["fingerprint"] = rs_val.get("fingerprint").cloned().unwrap_or(json!("chrome"));
+                // Only take fields supported by xray-lite source code
+                rs_new.insert("dest".to_string(), rs_val.get("dest").cloned().unwrap_or(json!("www.microsoft.com:443")));
+                rs_new.insert("privateKey".to_string(), rs_val.get("privateKey").cloned().or_else(|| rs_val.get("private_key").cloned()).unwrap_or(json!("")));
+                rs_new.insert("publicKey".to_string(), rs_val.get("publicKey").cloned().or_else(|| rs_val.get("public_key").cloned()).unwrap_or(Value::Null));
+                rs_new.insert("fingerprint".to_string(), rs_val.get("fingerprint").cloned().unwrap_or(json!("chrome")));
 
-                // serverNames (Array required)
+                // Force Array for serverNames
                 let sn = rs_val.get("serverNames").or_else(|| rs_val.get("serverName"));
-                rs_new["serverNames"] = if let Some(sn_val) = sn {
+                let server_names = if let Some(sn_val) = sn {
                     if sn_val.is_array() { sn_val.clone() }
                     else if let Some(s) = sn_val.as_str() { if s.is_empty() { json!([]) } else { json!([s]) } }
                     else { json!([]) }
                 } else { json!([]) };
+                rs_new.insert("serverNames".to_string(), server_names);
 
-                // shortIds (Array required)
+                // Force Array for shortIds
                 let si = rs_val.get("shortIds").or_else(|| rs_val.get("shortId"));
-                rs_new["shortIds"] = if let Some(si_val) = si {
+                let short_ids = if let Some(si_val) = si {
                     if si_val.is_array() { si_val.clone() }
                     else if let Some(s) = si_val.as_str() { if s.is_empty() { json!([]) } else { json!([s]) } }
                     else { json!([]) }
                 } else { json!([]) };
+                rs_new.insert("shortIds".to_string(), short_ids);
 
-                ss_obj.insert("realitySettings".to_string(), rs_new);
+                ss_obj.insert("realitySettings".to_string(), Value::Object(rs_new));
             }
         }
 
-        // XHTTP Normalization
+        // XHTTP Strict Normalization
         if let Some(xh_val) = ss_obj.get("xhttpSettings") {
-            let mut xh_new = json!({});
+            let mut xh_new = Map::new();
             let mode = xh_val.get("mode").and_then(|m| m.as_str()).unwrap_or("auto");
-            xh_new["mode"] = if mode == "packet-up" { json!("auto") } else { json!(mode) };
-            xh_new["path"] = xh_val.get("path").cloned().unwrap_or(json!("/"));
-            xh_new["host"] = xh_val.get("host").cloned().unwrap_or(json!(""));
-            ss_obj.insert("xhttpSettings".to_string(), xh_new);
+            xh_new.insert("mode".to_string(), if mode == "packet-up" { json!("auto") } else { json!(mode) });
+            xh_new.insert("path".to_string(), xh_val.get("path").cloned().unwrap_or(json!("/")));
+            xh_new.insert("host".to_string(), xh_val.get("host").cloned().unwrap_or(json!("")));
+            ss_obj.insert("xhttpSettings".to_string(), Value::Object(xh_new));
         }
 
-        // Sockopt Normalization
-        let mut sockopt = json!({
+        // Sockopt
+        let sockopt = json!({
             "tcpFastOpen": true,
             "tcpNoDelay": true,
             "acceptProxyProtocol": false
         });
-        if let Some(so_val) = ss_obj.get("sockopt") {
-            if let Some(b) = so_val.get("tcpFastOpen").and_then(|v| v.as_bool()) { sockopt["tcpFastOpen"] = json!(b); }
-            if let Some(b) = so_val.get("tcpNoDelay").and_then(|v| v.as_bool()) { sockopt["tcpNoDelay"] = json!(b); }
-            if let Some(b) = so_val.get("acceptProxyProtocol").and_then(|v| v.as_bool()) { sockopt["acceptProxyProtocol"] = json!(b); }
-        }
         ss_obj.insert("sockopt".to_string(), sockopt);
 
-        // --- 3. Assemble Inbound ---
-        let listen_addr = inbound.listen.as_ref()
-            .map(|s| if s.is_empty() { "0.0.0.0".to_string() } else { s.clone() })
-            .unwrap_or_else(|| "0.0.0.0".to_string());
+        // 3. Build Inbound
+        let mut inbound_map = Map::new();
+        inbound_map.insert("tag".to_string(), json!(inbound.tag.clone().unwrap_or_else(|| format!("inbound-{}", inbound.id))));
+        inbound_map.insert("port".to_string(), json!(inbound.port));
+        inbound_map.insert("protocol".to_string(), json!(inbound.protocol.to_lowercase()));
+        inbound_map.insert("listen".to_string(), json!(inbound.listen.as_ref().filter(|s| !s.is_empty()).unwrap_or(&"0.0.0.0".to_string())));
+        inbound_map.insert("settings".to_string(), settings);
+        inbound_map.insert("streamSettings".to_string(), Value::Object(ss_obj));
 
-        inbound_configs.push(InboundConfig {
-            tag: inbound.tag.clone().unwrap_or_else(|| format!("inbound-{}", inbound.id)),
-            port: inbound.port,
-            protocol: inbound.protocol.clone(),
-            listen: Some(listen_addr),
-            allocate: None,
-            settings: Some(settings),
-            stream_settings: Some(json!(ss_obj)),
-            sniffing: None,
-        });
+        inbound_configs.push(Value::Object(inbound_map));
     }
 
-    config.inbounds = inbound_configs;
-    config.outbounds.push(OutboundConfig {
-        tag: "direct".to_string(),
-        protocol: "freedom".to_string(),
-        settings: None,
-        stream_settings: None,
-    });
-    config.outbounds.push(OutboundConfig {
-        tag: "blocked".to_string(),
-        protocol: "blackhole".to_string(),
-        settings: None,
-        stream_settings: None,
-    });
-    config.routing = Some(RoutingConfig {
-        domain_strategy: "IPIfNonMatch".to_string(),
-        rules: vec![],
-    });
+    root.insert("inbounds".to_string(), Value::Array(inbound_configs));
+    root.insert("outbounds".to_string(), json!([
+        { "tag": "direct", "protocol": "freedom" },
+        { "tag": "blocked", "protocol": "blackhole" }
+    ]));
+    root.insert("routing".to_string(), json!({
+        "domainStrategy": "IPIfNonMatch",
+        "rules": []
+    }));
 
-    let config_json = serde_json::to_string_pretty(&config).map_err(|e| {
+    let config_json = serde_json::to_string_pretty(&Value::Object(root)).map_err(|e| {
         crate::errors::ApiError::InternalError(format!("Failed to serialize config: {}", e))
     })?;
 
@@ -191,18 +162,4 @@ pub async fn apply_config(pool: &SqlitePool, monitor: SharedMonitor) -> crate::e
     });
 
     Ok(())
-}
-
-impl Default for RoutingRule {
-    fn default() -> Self {
-        Self {
-            rule_type: "field".to_string(),
-            port: None,
-            inbound_tag: None,
-            outbound_tag: None,
-            ip: None,
-            domain: None,
-            protocol: None,
-        }
-    }
 }

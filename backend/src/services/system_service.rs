@@ -86,7 +86,14 @@ impl SystemMonitor {
         let mut net_up = 0;
         let mut net_down = 0;
 
-        for (_interface_name, data) in &self.networks {
+        for (interface_name, data) in &self.networks {
+            if interface_name == "lo" 
+                || interface_name.starts_with("docker") 
+                || interface_name.starts_with("veth") 
+                || interface_name.starts_with("br-") 
+            {
+                continue;
+            }
             net_sent += data.total_transmitted();
             net_recv += data.total_received();
             net_up += data.transmitted();

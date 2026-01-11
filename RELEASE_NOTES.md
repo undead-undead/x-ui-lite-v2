@@ -1,28 +1,21 @@
-# X-UI-Lite v2.5.0 - Accurate Traffic Statistics Release
+# X-UI-Lite v2.5.1 - Dual-Stack Traffic & Accuracy Fix
 
-This release introduces a major breakthrough in traffic tracking for the X-UI-Lite panel, alongside several UI refinements and codebase optimizations.
+This release addresses the issues found in v2.5.0, specifically improving traffic tracking accuracy for IPv6 and system-wide speed display.
 
-### 🌟 Key Highlights
+### 🌟 Fixes & Improvements
 
-#### 📊 100% Accurate Traffic Statistics
-We have completely replaced the unreliable log-parsing method with a robust **Linux Kernel Iptables Counter** system. 
-- **Bit-Perfect Accuracy**: Tracks traffic at the network layer for 100% precision.
-- **Kernel-Level Tracking**: Works independently of Xray logs or APIs.
-- **Atomic Updates**: Uses SQL atomic operations to ensure no traffic data is ever lost.
-- **Automatic Sync**: `iptables` rules are automatically created and synchronized with your inbounds.
+#### 🌐 Dual-Stack Traffic Tracking
+Added full `ip6tables` support. Previously, IPv6 traffic was not counted in the node list, leading to "0 upload/download" for some users. 
 
-#### 🎨 UI & UX Refinements
-- Simplified XHTTP mode descriptions for a cleaner, more professional interface.
-- Consistently uses internationalization keys for all UI elements.
+#### 🚀 Accurate System Speed
+Filtered out loopback and virtual interfaces (docker, veth, br-) from the dashboard speed display. This ensures that internal traffic no longer inflates the reported network speed or causes "upload = download" confusion.
 
-#### 🔧 System & Codebase
-- **Removed Legacy Scripts**: Cleaned up the repository by removing outdated installation and test scripts.
-- **Optimized `install.sh`**: Updated the installation script to support the new `v2.5.0` version and its dependencies.
-- **Full Compatibility**: Seamlessly integrated with the latest `xray-lite` core.
+#### 🛡️ Priority Rule Enforcement
+The traffic counting rules are now forcefully moved to the **top** of the Linux kernel chains (INPUT/OUTPUT 1). This prevents other firewall rules or "Established Connection" optimizations from bypassing our counters.
 
 ### 🛠 Installation & Upgrade
 
-To install or upgrade to v2.5.0, run the following command:
+To install or upgrade to v2.5.1, run:
 
 ```bash
 bash <(curl -Ls https://raw.githubusercontent.com/undead-undead/x-ui-lite/main/install.sh)
@@ -33,4 +26,4 @@ The new traffic tracking requires `iptables` support in the kernel. Most Linux d
 
 ---
 
-**Full Changelog**: [CHANGELOG.md](https://github.com/undead-undead/x-ui-lite/blob/v2.5.0/CHANGELOG.md)
+**Full Changelog**: [CHANGELOG.md](https://github.com/undead-undead/x-ui-lite/blob/v2.5.1/CHANGELOG.md)

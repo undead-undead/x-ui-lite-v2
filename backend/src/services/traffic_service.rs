@@ -8,7 +8,7 @@ use std::process::Command;
 use tokio::time::{interval, Duration};
 
 pub fn start_traffic_stats_task(pool: SqlitePool, monitor: SharedMonitor) {
-    tracing::info!("Starting traffic stats collector for xray-lite (Iptables Kernel Mode)");
+    tracing::info!("Starting traffic stats collector for xray-lite (Dual-Stack Iptables Kernel Mode)");
     
     tokio::spawn(async move {
         let mut interval = interval(Duration::from_secs(10));
@@ -18,7 +18,7 @@ pub fn start_traffic_stats_task(pool: SqlitePool, monitor: SharedMonitor) {
             interval.tick().await;
             
             if let Err(e) = process_iptables_traffic(&pool, monitor.clone(), &mut last_counters).await {
-                tracing::error!("Error processing iptables traffic: {}", e);
+                tracing::error!("Error processing dual-stack iptables traffic: {}", e);
             }
         }
     });
@@ -29,11 +29,11 @@ async fn process_iptables_traffic(
     monitor: SharedMonitor,
     last_counters: &mut HashMap<String, (u64, u64)>,
 ) -> ApiResult<()> {
-    // 1. Sync Rules
-    sync_iptables_rules(pool).await?;
+    // 1. Sync Rules (IPv4 & IPv6)
+    sync_all_rules(pool).await?;
 
-    // 2. Read Stats
-    let current_stats = read_iptables_stats()?;
+    // 2. Read Stats (Sum of IPv4 & IPv6)
+    let current_stats = read_all_stats()?;
     
     let mut needs_reapply = false;
 
@@ -76,119 +76,126 @@ struct TrafficData {
     down: i64,
 }
 
-async fn sync_iptables_rules(pool: &SqlitePool) -> ApiResult<()> {
-    // Get enabled inbounds
+async fn sync_all_rules(pool: &SqlitePool) -> ApiResult<()> {
     let inbounds = sqlx::query_as::<_, Inbound>("SELECT * FROM inbounds WHERE enable = 1")
         .fetch_all(pool)
         .await
         .map_err(|e| crate::errors::ApiError::InternalError(format!("DB error: {}", e)))?;
 
-    // Create chains if they don't exist
-    let _ = Command::new("iptables").args(["-N", "XUI_IN"]).output();
-    let _ = Command::new("iptables").args(["-N", "XUI_OUT"]).output();
+    sync_family_rules("iptables", &inbounds)?;
+    if has_command("ip6tables") {
+        sync_family_rules("ip6tables", &inbounds)?;
+    }
 
-    // Ensure jump rules exist (insert at top only once)
-    ensure_jump_rule("INPUT", "XUI_IN")?;
-    ensure_jump_rule("OUTPUT", "XUI_OUT")?;
+    Ok(())
+}
 
-    // Get current rules to avoid duplicates
-    let current_rules_in = get_chain_rules("XUI_IN")?;
-    let current_rules_out = get_chain_rules("XUI_OUT")?;
+fn sync_family_rules(cmd: &str, inbounds: &[Inbound]) -> ApiResult<()> {
+    // Create chains
+    let _ = Command::new(cmd).args(["-N", "XUI_IN"]).output();
+    let _ = Command::new(cmd).args(["-N", "XUI_OUT"]).output();
+
+    // Ensure jump rules are AT THE TOP (Position 1)
+    ensure_jump_rule_at_top(cmd, "INPUT", "XUI_IN")?;
+    ensure_jump_rule_at_top(cmd, "OUTPUT", "XUI_OUT")?;
 
     for inbound in inbounds {
         let tag = inbound.tag.as_ref().filter(|s| !s.is_empty()).cloned().unwrap_or_else(|| format!("inbound-{}", inbound.id));
-        let port = inbound.port;
+        let port = inbound.port.to_string();
         let comment = format!("xui-{}", tag);
 
-        // INPUT Rules (Downlink for server)
-        if !current_rules_in.contains(&comment) {
-            let _ = Command::new("iptables").args([
-                "-A", "XUI_IN", "-p", "tcp", "--dport", &port.to_string(),
-                "-j", "RETURN", "-m", "comment", "--comment", &comment
-            ]).status();
-            let _ = Command::new("iptables").args([
-                "-A", "XUI_IN", "-p", "udp", "--dport", &port.to_string(),
-                "-j", "RETURN", "-m", "comment", "--comment", &comment
-            ]).status();
-        }
-
-        // OUTPUT Rules (Uplink for server)
-        if !current_rules_out.contains(&comment) {
-            let _ = Command::new("iptables").args([
-                "-A", "XUI_OUT", "-p", "tcp", "--sport", &port.to_string(),
-                "-j", "RETURN", "-m", "comment", "--comment", &comment
-            ]).status();
-            let _ = Command::new("iptables").args([
-                "-A", "XUI_OUT", "-p", "udp", "--sport", &port.to_string(),
-                "-j", "RETURN", "-m", "comment", "--comment", &comment
-            ]).status();
-        }
-    }
-
-    Ok(())
-}
-
-fn ensure_jump_rule(base_chain: &str, target_chain: &str) -> ApiResult<()> {
-    let output = Command::new("iptables").args(["-C", base_chain, "-j", target_chain]).output().ok();
-    let exists = output.map(|o| o.status.success()).unwrap_or(false);
-    
-    if !exists {
-        let _ = Command::new("iptables").args(["-I", base_chain, "1", "-j", target_chain]).status();
+        // Check and Add INPUT (IN)
+        check_and_add_rule(cmd, "XUI_IN", &port, "dport", &comment)?;
+        // Check and Add OUTPUT (OUT)
+        check_and_add_rule(cmd, "XUI_OUT", &port, "sport", &comment)?;
     }
     Ok(())
 }
 
-fn get_chain_rules(chain: &str) -> ApiResult<Vec<String>> {
-    let output = Command::new("iptables").args(["-S", chain]).output().map_err(|e| {
-        crate::errors::ApiError::SystemError(format!("Iptables -S failed: {}", e))
-    })?;
-    
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut comments = Vec::new();
-    for line in stdout.lines() {
-        if let Some(pos) = line.find("--comment ") {
-            let comment = line[pos + 10..].trim_matches('\"').replace("\"", "");
-            comments.push(comment);
-        }
+fn ensure_jump_rule_at_top(cmd: &str, base_chain: &str, target_chain: &str) -> ApiResult<()> {
+    // Check if it exists exactly at position 1
+    let output = Command::new(cmd).args(["-L", base_chain, "1", "-n"]).output();
+    let is_at_top = if let Ok(out) = output {
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        stdout.contains(target_chain)
+    } else {
+        false
+    };
+
+    if !is_at_top {
+        // Remove all occurrences first to avoid duplicates
+        while Command::new(cmd).args(["-D", base_chain, "-j", target_chain]).status().map(|s| s.success()).unwrap_or(false) {}
+        // Insert at 1
+        let _ = Command::new(cmd).args(["-I", base_chain, "1", "-j", target_chain]).status();
     }
-    Ok(comments)
+    Ok(())
 }
 
-fn read_iptables_stats() -> ApiResult<HashMap<String, (u64, u64)>> {
+fn check_and_add_rule(cmd: &str, chain: &str, port: &str, port_type: &str, comment: &str) -> ApiResult<()> {
+    for proto in ["tcp", "udp"] {
+        let port_arg = format!("--{}", port_type);
+        let exists = Command::new(cmd)
+            .args(["-C", chain, "-p", proto, &port_arg, port, "-j", "RETURN", "-m", "comment", "--comment", comment])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false);
+
+        if !exists {
+            let _ = Command::new(cmd)
+                .args(["-A", chain, "-p", proto, &port_arg, port, "-j", "RETURN", "-m", "comment", "--comment", comment])
+                .status();
+        }
+    }
+    Ok(())
+}
+
+fn read_all_stats() -> ApiResult<HashMap<String, (u64, u64)>> {
     let mut stats: HashMap<String, (u64, u64)> = HashMap::new();
-
-    // Read INPUT (Down)
-    parse_chain_stats("XUI_IN", &mut stats, true)?;
-    // Read OUTPUT (Up)
-    parse_chain_stats("XUI_OUT", &mut stats, false)?;
+    
+    // Read IPv4
+    parse_family_stats("iptables", &mut stats)?;
+    // Read IPv6
+    if has_command("ip6tables") {
+        parse_family_stats("ip6tables", &mut stats)?;
+    }
 
     Ok(stats)
 }
 
-fn parse_chain_stats(chain: &str, stats: &mut HashMap<String, (u64, u64)>, is_in: bool) -> ApiResult<()> {
-    let output = Command::new("iptables").args(["-L", chain, "-v", "-n", "-x"]).output().map_err(|e| {
-        crate::errors::ApiError::SystemError(format!("Iptables -L failed: {}", e))
+fn parse_family_stats(cmd: &str, stats: &mut HashMap<String, (u64, u64)>) -> ApiResult<()> {
+    parse_chain_stats_sum(cmd, "XUI_IN", stats, true)?;
+    parse_chain_stats_sum(cmd, "XUI_OUT", stats, false)?;
+    Ok(())
+}
+
+fn parse_chain_stats_sum(cmd: &str, chain: &str, stats: &mut HashMap<String, (u64, u64)>, is_in: bool) -> ApiResult<()> {
+    let output = Command::new(cmd).args(["-L", chain, "-v", "-n", "-x"]).output().map_err(|e| {
+        crate::errors::ApiError::SystemError(format!("{} failed: {}", cmd, e))
     })?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     for line in stdout.lines() {
-        if line.contains("/* xui-") {
+        if let Some(comment_pos) = line.find("/* xui-") {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if parts.len() < 2 { continue; }
             
             let bytes = parts[1].parse::<u64>().unwrap_or(0);
-            if let Some(comment_pos) = line.find("/* xui-") {
-                let tag = line[comment_pos + 7..].trim_end_matches(" */").trim().to_string();
-                let entry = stats.entry(tag).or_insert((0, 0));
-                if is_in {
-                    entry.0 += bytes;
-                } else {
-                    entry.1 += bytes;
-                }
+            let end_pos = line[comment_pos..].find(" */").map(|p| p + comment_pos).unwrap_or(line.len());
+            let tag = line[comment_pos + 7..end_pos].trim().to_string();
+            
+            let entry = stats.entry(tag).or_insert((0, 0));
+            if is_in {
+                entry.0 += bytes;
+            } else {
+                entry.1 += bytes;
             }
         }
     }
     Ok(())
+}
+
+fn has_command(cmd: &str) -> bool {
+    Command::new("which").arg(cmd).output().map(|o| o.status.success()).unwrap_or(false)
 }
 
 async fn update_db_traffic(
@@ -196,7 +203,6 @@ async fn update_db_traffic(
     data: &TrafficData,
     needs_reapply: &mut bool,
 ) -> ApiResult<()> {
-    // 1. Update traffic atomically and check quota
     sqlx::query(
         r#"
         UPDATE inbounds 
@@ -217,7 +223,6 @@ async fn update_db_traffic(
     .execute(pool)
     .await.map_err(|e| crate::errors::ApiError::InternalError(format!("Update DB failed: {}", e)))?;
 
-    // 2. Check if we just disabled any node to trigger config reapply
     let inbound = sqlx::query_as::<_, Inbound>("SELECT * FROM inbounds WHERE tag = ?")
         .bind(&data.tag)
         .fetch_optional(pool)

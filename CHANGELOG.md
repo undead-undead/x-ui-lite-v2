@@ -2,6 +2,17 @@
 
 All notable changes to X-UI-Lite will be documented in this file.
 
+## [2.5.1] - 2026-01-11
+
+### 🚀 Bug Fixes & Optimization
+
+- **Dual-Stack Traffic Statistics**: Added support for `ip6tables` to ensure IPv6 traffic is correctly counted in the node list.
+- **Accurate System Status Speed**: Optimized system network interface monitoring by excluding loopback and virtual interfaces, providing more accurate real-world traffic speeds.
+- **Priority Rules**: Ensured traffic counting rules are always at the top of the `INPUT` and `OUTPUT` chains to prevent bypass by established connection rules or firewall overrides.
+- **Robust Rule Check**: Improved the rule synchronization logic for higher reliability.
+
+---
+
 ## [2.5.0] - 2026-01-11
 
 ### 🚀 Major Improvements

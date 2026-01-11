@@ -38,6 +38,16 @@ bash <(curl -Ls https://raw.githubusercontent.com/undead-undead/x-ui-lite-v2/mai
 
 ---
 
+## 📱 Client Compatibility / 客户端兼容性
+
+- **PC/Windows/Mac (v2rayN/Core)**: Fully Compatible with Reality & XHTTP modes.
+- **Mobile (iOS/Shadowrocket)**: ⚠️ Compatible with **Reality (TCP)** ONLY. XHTTP (gRPC) mode is currently incompatible.
+
+- **PC/Windows/Mac (v2rayN/Core)**: 完美兼容 Reality 和 XHTTP 模式。
+- **移动端 (iOS/小火箭)**: ⚠️ 仅兼容 **Reality (TCP)** 模式。XHTTP (gRPC) 模式暂不兼容。
+
+---
+
 ## 🔧 Technical Stack
 
 - **Backend**: Rust (Axum framework) + SQLite (SQLx)

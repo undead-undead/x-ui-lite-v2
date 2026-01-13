@@ -31,7 +31,14 @@ export const useInboundStore = create<InboundStore>((set, get) => ({
                     streamSettings: typeof item.streamSettings === 'string' ? JSON.parse(item.streamSettings) : item.streamSettings,
                     sniffing: typeof item.sniffing === 'string' ? JSON.parse(item.sniffing) : item.sniffing,
                     allocate: typeof item.allocate === 'string' ? JSON.parse(item.allocate) : item.allocate,
-                })).sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+                })).sort((a, b) => {
+                    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    if (timeB !== timeA) {
+                        return timeB - timeA;
+                    }
+                    return String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+                });
                 set({ inbounds: processed });
             }
         } finally {

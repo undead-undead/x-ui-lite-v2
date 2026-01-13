@@ -3,7 +3,7 @@ use crate::models::inbound::{CreateInboundRequest, Inbound, UpdateInboundRequest
 use sqlx::SqlitePool;
 
 pub async fn get_all_inbounds(pool: &SqlitePool) -> ApiResult<Vec<Inbound>> {
-    let inbounds = sqlx::query_as::<_, Inbound>("SELECT * FROM inbounds ORDER BY id DESC")
+    let inbounds = sqlx::query_as::<_, Inbound>("SELECT * FROM inbounds ORDER BY created_at DESC")
         .fetch_all(pool)
         .await?;
     Ok(inbounds)

@@ -115,10 +115,10 @@ RELEASE_URL="https://github.com/undead-undead/x-ui-lite/releases/download/v2.5.1
 install_dependencies() {
     i18n "install_deps"
     if [[ -f /usr/bin/apt ]]; then
-        apt update -y
-        apt install -y curl wget tar unzip
+        apt-get update -y -qq >/dev/null 2>&1
+        apt-get install -y -qq curl wget tar unzip >/dev/null 2>&1
     elif [[ -f /usr/bin/yum ]]; then
-        yum install -y curl wget tar unzip
+        yum install -y -q curl wget tar unzip >/dev/null 2>&1
     fi
 }
 
@@ -163,7 +163,7 @@ enable_bbr() {
     i18n "bbr_enabling"
     echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
     echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
-    sysctl -p
+    sysctl -p >/dev/null 2>&1
     if sysctl net.ipv4.tcp_congestion_control | grep -q bbr; then
         i18n "bbr_on"
     else

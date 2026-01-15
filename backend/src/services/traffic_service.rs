@@ -134,17 +134,17 @@ fn ensure_jump_rule_at_top(cmd: &str, base_chain: &str, target_chain: &str) -> A
 fn check_and_add_rule(cmd: &str, chain: &str, port: &str, port_type: &str, comment: &str) -> ApiResult<()> {
     for proto in ["tcp", "udp"] {
         let port_arg = format!("--{}", port_type);
-        // Using -C is standard. If it fails, add.
-        let status = Command::new(cmd)
+        // Using -C to check if rule exists. Use output() to suppress stderr.
+        let exists = Command::new(cmd)
             .args(["-C", chain, "-p", proto, &port_arg, port, "-j", "RETURN", "-m", "comment", "--comment", comment])
-            .status()
-            .map(|s| s.success())
+            .output()
+            .map(|o| o.status.success())
             .unwrap_or(false);
 
-        if !status {
+        if !exists {
             let _ = Command::new(cmd)
                 .args(["-A", chain, "-p", proto, &port_arg, port, "-j", "RETURN", "-m", "comment", "--comment", comment])
-                .status();
+                .output();  // Also use output() to suppress stderr
         }
     }
     Ok(())

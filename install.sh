@@ -115,10 +115,10 @@ RELEASE_URL="https://github.com/undead-undead/x-ui-lite/releases/download/v2.8.3
 install_dependencies() {
     i18n "install_deps"
     if [[ -f /usr/bin/apt ]]; then
-        apt update -y
-        apt install -y curl wget tar unzip
+        apt update -y >/dev/null 2>&1
+        apt install -y curl wget tar unzip >/dev/null 2>&1
     elif [[ -f /usr/bin/yum ]]; then
-        yum install -y curl wget tar unzip
+        yum install -y curl wget tar unzip >/dev/null 2>&1
     fi
 }
 
@@ -155,7 +155,7 @@ open_port() {
 
 enable_bbr() {
     i18n "bbr_check"
-    if sysctl net.ipv4.tcp_congestion_control | grep -q bbr; then
+    if sysctl net.ipv4.tcp_congestion_control 2>/dev/null | grep -q bbr; then
         i18n "bbr_on"
         return
     fi
@@ -163,8 +163,8 @@ enable_bbr() {
     i18n "bbr_enabling"
     echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
     echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
-    sysctl -p
-    if sysctl net.ipv4.tcp_congestion_control | grep -q bbr; then
+    sysctl -p >/dev/null 2>&1
+    if sysctl net.ipv4.tcp_congestion_control 2>/dev/null | grep -q bbr; then
         i18n "bbr_on"
     else
         i18n "bbr_fail"
@@ -173,10 +173,7 @@ enable_bbr() {
 
 install_xray() {
     # Force update: remove existing binary if it exists
-    if [[ -f "$XRAY_BIN_PATH" ]]; then
-        echo "Removing existing xray-lite binary to ensure update..."
-        rm -f "$XRAY_BIN_PATH"
-    fi
+    [[ -f "$XRAY_BIN_PATH" ]] && rm -f "$XRAY_BIN_PATH"
 
     i18n "xray_installing"
     
@@ -189,14 +186,12 @@ install_xray() {
     fi
     
     local xray_lite_file="vless-server-linux-${xray_lite_arch}"
-    # Download from x-ui-lite release instead of xray-lite repo (Updated to v0.4.3)
     local xray_lite_url="https://github.com/undead-undead/xray-lite/releases/download/v0.4.3/${xray_lite_file}"
     
-    # Try downloading xray-lite
-    wget -N --no-check-certificate -q -O /tmp/vless-server $xray_lite_url
+    # Try downloading xray-lite (silent)
+    wget -N --no-check-certificate -q -O /tmp/vless-server $xray_lite_url 2>/dev/null
     if [[ $? -ne 0 ]]; then
-        echo -e "${red}Failed to download xray-lite binary${plain}"
-        echo -e "${yellow}xray-lite binary not available for architecture: ${xray_lite_arch}${plain}"
+        echo -e "${red}Failed to download xray-lite${plain}"
         i18n "xray_fail"
         return 1
     fi
@@ -205,11 +200,7 @@ install_xray() {
     mv /tmp/vless-server $XRAY_BIN_PATH
     chmod +x $XRAY_BIN_PATH
     
-    # Keygen binary is no longer needed as key generation is now native in backend
-    # but we install it anyway just in case user wants to use cli
-    echo -e "${green}Skipping keygen tool installation (native support active)...${plain}"
-    
-    echo -e "${green}xray-lite installed successfully${plain}"
+    echo -e "${green}✓ xray-lite${plain}"
 }
 
 install_x_ui() {
@@ -231,13 +222,11 @@ install_x_ui() {
     cd /tmp || { echo -e "${red}Failed to cd to /tmp${plain}"; return 1; }
     rm -f x-ui-linux-${arch}.tar.gz
     
-    # Use -L to follow redirects from GitHub
+    # Use -L to follow redirects from GitHub (silent)
     if command -v wget &> /dev/null; then
-        echo "Using wget to download..."
-        wget -L --no-check-certificate -O x-ui-linux-${arch}.tar.gz "$RELEASE_URL" 2>&1
+        wget -q -L --no-check-certificate -O x-ui-linux-${arch}.tar.gz "$RELEASE_URL" 2>/dev/null
     elif command -v curl &> /dev/null; then
-        echo "Using curl to download..."
-        curl -L -o x-ui-linux-${arch}.tar.gz "$RELEASE_URL" 2>&1
+        curl -sL -o x-ui-linux-${arch}.tar.gz "$RELEASE_URL" 2>/dev/null
     else
         echo -e "${red}Error: Neither wget nor curl is available${plain}"
         return 1
@@ -245,21 +234,17 @@ install_x_ui() {
     
     # Verify download
     if [[ ! -f x-ui-linux-${arch}.tar.gz || ! -s x-ui-linux-${arch}.tar.gz ]]; then
-        echo -e "${red}Failed to download X-UI v2.0.0${plain}"
-        echo -e "${red}Please check if the v2.0.0 release exists at:${plain}"
-        echo -e "${red}https://github.com/undead-undead/x-ui-lite/releases/tag/v2.0.0${plain}"
+        echo -e "${red}Download failed${plain}"
         i18n "xui_fail"
         return 1
     fi
-    
-    echo "Download successful: $(ls -lh x-ui-linux-${arch}.tar.gz)"
 
     # Clean old dist folders to ensure new version takes effect
     rm -rf $INSTALL_PATH/dist
     rm -rf $INSTALL_PATH/bin/dist
     
-    # Extract
-    tar -zxvf x-ui-linux-${arch}.tar.gz -C $INSTALL_PATH
+    # Extract (silent)
+    tar -zxf x-ui-linux-${arch}.tar.gz -C $INSTALL_PATH 2>/dev/null
     chmod +x $BIN_PATH
     
     # Install Xray
@@ -379,11 +364,10 @@ EOFJRNL
     chmod 755 $INSTALL_PATH/data
     chmod 644 $INSTALL_PATH/data/x-ui.db
 
-    systemctl enable x-ui
-    systemctl start x-ui
+    systemctl enable x-ui >/dev/null 2>&1
+    systemctl start x-ui >/dev/null 2>&1
     
     # 等待服务启动并初始化数据库
-    echo -e "${yellow}Waiting for service to initialize...${plain}"
     sleep 2
     
     # 设置初始账户密码
@@ -406,18 +390,17 @@ EOFJRNL
     done
     
     # 设置初始账户密码前先停止服务，避免数据库锁竞争
-    systemctl stop x-ui 
+    systemctl stop x-ui >/dev/null 2>&1
     
     # 使用后端命令行工具设置账户
     cd $INSTALL_PATH
-    echo -e "${yellow}Setting up admin account...${plain}"
-    $BIN_PATH -u "$admin_user" -p "$admin_pass"
+    $BIN_PATH -u "$admin_user" -p "$admin_pass" >/dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         echo -e "${red}Failed to set account! Using default: admin/admin${plain}"
         admin_user="admin"
         admin_pass="admin"
     fi
-    systemctl start x-ui
+    systemctl start x-ui >/dev/null 2>&1
     
     # 获取公网IP
     public_ip=$(curl -s https://api.ipify.org || curl -s https://ifconfig.me/ip || echo "YOUR_IP")

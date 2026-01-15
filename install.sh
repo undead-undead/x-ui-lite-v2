@@ -348,6 +348,27 @@ WantedBy=multi-user.target
 EOF
 
     systemctl daemon-reload
+
+    # Configure journald log rotation / 配置 journald 日志轮转
+    echo -e "${yellow}Configuring log rotation... / 配置日志轮转...${plain}"
+    mkdir -p /etc/systemd/journald.conf.d
+    cat > /etc/systemd/journald.conf.d/x-ui-lite.conf << EOFJRNL
+# X-UI-Lite journald log rotation configuration
+# X-UI-Lite journald 日志轮转配置
+[Journal]
+# Maximum disk usage for logs / 日志最大磁盘使用量
+SystemMaxUse=50M
+# Maximum size of individual log files / 单个日志文件最大大小
+SystemMaxFileSize=10M
+# Log retention time (7 days) / 日志保留时间（7天）
+MaxRetentionSec=7day
+# Compress logs older than 1 day / 压缩超过1天的日志
+Compress=yes
+EOFJRNL
+
+    # Restart journald to apply configuration / 重启 journald 应用配置
+    systemctl restart systemd-journald >/dev/null 2>&1
+    echo -e "${green}✓ Log rotation configured (max 50MB, 7 days) / 日志轮转已配置 (最大 50MB, 7天)${plain}"
     
     # Auto Enable BBR
     enable_bbr

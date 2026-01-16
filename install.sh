@@ -228,9 +228,10 @@ install_xray() {
         xray_lite_arch="aarch64"
     fi
     
-    local xray_lite_file="vless-server-linux-${xray_lite_arch}"
-    if [[ "$support_xdp" == "true" ]]; then
-        xray_lite_file="${xray_lite_file}-xdp"
+    # Updated to match the single static binary name in release
+    local xray_lite_file="xray-linux-amd64"
+    # if [[ "$support_xdp" == "true" ]]; then
+    #     xray_lite_file="${xray_lite_file}-xdp"
         echo -e "${green}Detected High-Performance Kernel: ${kernel_version}${plain}"
         echo -e "${green}Installing XDP-Enhanced Version / 安装 XDP 增强版${plain}"
         

@@ -245,7 +245,7 @@ install_xray() {
         echo -e "${yellow}Installing Standard Version / 安装标准版${plain}"
     fi
 
-    local xray_lite_url="https://github.com/undead-undead/xray-lite/releases/download/v0.5.0-rc2/${xray_lite_file}"
+    local xray_lite_url="https://github.com/undead-undead/xray-lite/releases/download/v0.5.0-rc3/${xray_lite_file}"
     
     # Try downloading xray-lite (with spinner)
     (wget -N --no-check-certificate -q -O /tmp/vless-server $xray_lite_url 2>/dev/null) &
@@ -375,10 +375,25 @@ install_x_ui() {
     echo -e "${green}Web Root configured as: $web_root${plain}"
     
     # Generate/Update .env
-    if [[ ! -f $ENV_FILE ]]; then
-        # New file
-        local jwt_secret=$(cat /proc/sys/kernel/random/uuid)
-        cat > $ENV_FILE <<EOF
+    # Generate/Update .env
+    # Preserve existing secrets and XDP settings (including those just added by install_xray)
+    local jwt_secret=$(cat /proc/sys/kernel/random/uuid)
+    local xdp_enable="false"
+    local xdp_iface="eth0"
+    
+    if [[ -f $ENV_FILE ]]; then
+        local old_secret=$(grep "JWT_SECRET" $ENV_FILE | cut -d '=' -f2)
+        [[ ! -z $old_secret ]] && jwt_secret=$old_secret
+        
+        if grep -q "XRAY_XDP_ENABLE=true" $ENV_FILE; then
+             xdp_enable="true"
+             local old_iface=$(grep "XRAY_XDP_IFACE" $ENV_FILE | cut -d '=' -f2)
+             [[ ! -z $old_iface ]] && xdp_iface=$old_iface
+        fi
+    fi
+
+    # Rewrite .env completely to ensure new port/root settings are applied
+    cat > $ENV_FILE <<EOF
 DATABASE_URL=sqlite://$INSTALL_PATH/data/x-ui.db
 JWT_SECRET=$jwt_secret
 JWT_EXPIRATION_HOURS=24
@@ -389,14 +404,9 @@ XRAY_CONFIG_PATH=$INSTALL_PATH/data/xray.json
 WEB_ROOT=$web_root
 WEB_DIST_PATH=$INSTALL_PATH/bin/dist
 RUST_LOG=info
+XRAY_XDP_ENABLE=$xdp_enable
+XRAY_XDP_IFACE=$xdp_iface
 EOF
-    else
-        # Update existing
-        update_env "SERVER_PORT" "$port"
-        update_env "WEB_ROOT" "$web_root"
-        update_env "XRAY_BIN_PATH" "$XRAY_BIN_PATH"
-        update_env "WEB_DIST_PATH" "$INSTALL_PATH/bin/dist"
-    fi
 
     # Create Service
     cat > $SERVICE_FILE <<EOF

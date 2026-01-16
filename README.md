@@ -30,7 +30,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/undead-undead/x-ui-lite/feat
 >
 > **注意**：
 > - **🔥 XDP 防火墙要求**：推荐内核 ≥ 5.15 (Ubuntu 22.04+, Debian 11+) 以启用原生高性能模式。
-> - 脚本若检测到支持的内核，将**自动启用 XDP 防火墙** (丢弃恶意 UDP 包)。
+> - 脚本若检测到支持的内核，将**自动启用 XDP 防火墙** (丢弃非法 Flags 的 TCP 包，保护 443 端口)。
 
 ---
 

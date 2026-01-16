@@ -16,6 +16,12 @@ A high-performance, minimalist X-UI panel powered by **xray-lite**.
 
 ## ⚡ Quick Start
 
+### 1. Stable Release (Recommended) / 稳定版（推荐）
+
+> **Stable Version: v2.8.7 (Core v0.4.6)**
+>
+> 适用于生产环境，稳定可靠。
+
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/undead-undead/x-ui-lite/main/install.sh)
 ```
@@ -23,6 +29,20 @@ bash <(curl -fsSL https://raw.githubusercontent.com/undead-undead/x-ui-lite/main
 > **Note**: This is a **static compilation version** that works perfectly on **any Linux system** (Debian, Ubuntu, CentOS, Alpine, etc.) without dependency issues.
 >
 > **注意**：此为**静态编译版本**，完美适配**任何 Linux 系统** (Debian, Ubuntu, CentOS, Alpine 等)，无需担心依赖问题。
+
+### 2. Beta Release (XDP Firewall) / 测试版（XDP 防火墙）
+
+> **Beta Version: Feature Preview (Core v0.5.0-rc4)**
+> 
+> **Requirements**: Linux Kernel ≥ 5.4, Root Privileges.
+
+**Why Beta? / 为什么选择测试版？**
+*   🛡️ **XDP Firewall**: Kernel-level protection against UDP Floods & Probing. / 内核级防御 UDP 洪水和探测。
+*   🚀 **Performance**: Drop malicious packets at driver level, saving CPU. / 驱动层丢包，极致性能。
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/undead-undead/x-ui-lite/feature/xdp-integration/install.sh)
+```
 
 ---
 

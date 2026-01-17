@@ -32,13 +32,13 @@ bash <(curl -fsSL https://raw.githubusercontent.com/undead-undead/x-ui-lite/main
 
 ### 2. XDP Release (Performance) / XDP 版（高性能）
 
-> **Version: v2.8.11 (Core v0.5.0 Stable)**
+> **Version: v2.8.12 (Core v0.6.0-beta1)**
 > 
 > **Requirements**: Linux Kernel ≥ 5.4, Root Privileges.
 
 **Why XDP? / 为什么选择 XDP 版？**
-*   🛡️ **XDP Firewall**: Kernel-level protection against TCP SYN Floods & Illegal Flags. / 内核级防御 TCP SYN 洪水和非法标志。
-*   🛑 **Anti-Probe**: Instantly drops **Illegal TCP Packets** (e.g., Null Scan, SYN+FIN). UDP is passed through for QUIC compatibility. / 在网卡驱动层直接丢弃非法 TCP 包。（UDP 流量放行以支持 QUIC 兼容性）。
+*   🛡️ **XDP Firewall**: Kernel-level protection against **UDP Floods**, **TCP SYN Floods (Rate Limit)** & **Illegal Flags**. / 内核级防御 UDP 洪水、TCP SYN 洪水（限流）和非法标志。
+*   🛑 **Anti-Probe**: Instantly drops **UDP Floods** and **Illegal TCP Packets** (e.g., Null Scan, SYN+FIN). / 瞬时丢弃 UDP 洪水和非法 TCP 包。
 *   🚀 **Performance**: Drop malicious packets at driver level, saving CPU. / 驱动层丢包，极致性能。
 
 ```bash
